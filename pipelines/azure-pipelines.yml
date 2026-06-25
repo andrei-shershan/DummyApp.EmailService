@@ -1,0 +1,65 @@
+trigger:
+  - main
+
+# Disable PR trigger as build validation is covered by GitHub Actions
+pr: none
+
+stages:
+
+- stage: Build
+  displayName: Build
+  jobs:
+  - job: Build
+    displayName: Build job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.0.x'
+      displayName: 'Use .NET 8 SDK'
+
+    - script: dotnet restore src/DummyApp.EmailService.Functions/DummyApp.EmailService.Functions.csproj
+      displayName: 'Restore NuGet packages'
+
+    - script: >
+        dotnet publish src/DummyApp.EmailService.Functions/DummyApp.EmailService.Functions.csproj
+        --configuration Release
+        --no-restore
+        --output $(Build.ArtifactStagingDirectory)/publish
+      displayName: 'Publish'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/site.zip'
+        replaceExistingArchive: true
+      displayName: 'Archive publish output'
+
+    - publish: $(Build.ArtifactStagingDirectory)/site.zip
+      artifact: drop
+
+- stage: Test
+  displayName: Test
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: Test
+    displayName: Test job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.0.x'
+      displayName: 'Use .NET 8 SDK'
+
+    - script: dotnet restore tests/DummyApp.EmailService.Functions.Tests/DummyApp.EmailService.Functions.Tests.csproj
+      displayName: 'Restore test project packages'
+
+    - script: dotnet test tests/DummyApp.EmailService.Functions.Tests/DummyApp.EmailService.Functions.Tests.csproj --configuration Release --no-restore
+      displayName: 'Run unit tests'

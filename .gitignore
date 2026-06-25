@@ -1,0 +1,51 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+**/bin/
+**/obj/
+
+# Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userprefs
+
+# NuGet
+*.nupkg
+packages/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Azure Web Apps publish settings
+*.Publish.xml
+
+# Build output
+*.dll
+*.exe
+*.app
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# dotnet watch
+.dotnet/

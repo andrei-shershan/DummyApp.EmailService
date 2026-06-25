@@ -1,0 +1,4 @@
+<Solution>
+    <Project Path="src/DummyApp.EmailService.Functions/DummyApp.EmailService.Functions.csproj" />
+    <Project Path="tests/DummyApp.EmailService.Functions.Tests/DummyApp.EmailService.Functions.Tests.csproj" />
+</Solution>
