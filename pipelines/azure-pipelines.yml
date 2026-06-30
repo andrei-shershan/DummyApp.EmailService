@@ -63,3 +63,53 @@ stages:
 
     - script: dotnet test tests/DummyApp.EmailService.Functions.Tests/DummyApp.EmailService.Functions.Tests.csproj --configuration Release --no-restore
       displayName: 'Run unit tests'
+
+- stage: DeployTest
+  displayName: 'Deploy test'
+  dependsOn: Test
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), or(eq(variables['Build.Reason'], 'IndividualCI'), eq(variables['Build.Reason'], 'Manual')))
+  jobs:
+  - deployment: Deploy
+    environment: $(PIPELINES_ENVIRONMENT_TEST)
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(SERVICE_CONNECTION_TEST)'
+              appType: 'functionApp'
+              appName: '$(APP_NAME_TEST)'
+              package: '$(Pipeline.Workspace)/drop/site.zip'
+              runtimeStack: 'DOTNET_ISOLATED|8.0'
+            displayName: 'Deploy to Azure Function App (Test)'
+
+- stage: DeployProd
+  displayName: 'Deploy prod'
+  dependsOn: DeployTest
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), or(eq(variables['Build.Reason'], 'IndividualCI'), eq(variables['Build.Reason'], 'Manual')))
+  jobs:
+  - deployment: DeployProd
+    environment: $(PIPELINES_ENVIRONMENT_PROD)
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(SERVICE_CONNECTION_PROD)'
+              appType: 'functionApp'
+              appName: '$(APP_NAME_PROD)'
+              package: '$(Pipeline.Workspace)/drop/site.zip'
+              runtimeStack: 'DOTNET_ISOLATED|8.0'
+            displayName: 'Deploy to Azure Function App (Prod)'
