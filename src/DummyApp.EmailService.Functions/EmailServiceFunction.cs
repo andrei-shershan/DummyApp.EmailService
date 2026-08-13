@@ -116,6 +116,22 @@ public sealed class EmailServiceFunction
         return response;
     }
 
+    [Function("SendTestEmail")]
+    public async Task<HttpResponseData> SendTestEmail(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "email/test")]
+        HttpRequestData req,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("SendTestEmail triggered. Method: {Method}, Url: {Url}", req.Method, req.Url);
+        _logger.LogInformation("************************************************");
+
+        await _emailService.SendTestEmailAsync(cancellationToken);
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(new { message = "Test email request accepted." }, cancellationToken);
+        return response;
+    }
+
     private static HttpResponseData CreateBadRequest(HttpRequestData req, string message)
     {
         var response = req.CreateResponse(HttpStatusCode.BadRequest);

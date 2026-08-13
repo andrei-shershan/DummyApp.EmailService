@@ -6,4 +6,5 @@ public interface IEmailService
 {
     Task SendEmailAsync(SendEmailRequest request, CancellationToken cancellationToken);
     Task SendInviteAsync(InviteEmailRequest request, CancellationToken cancellationToken);
+    Task SendTestEmailAsync(CancellationToken cancellationToken);
 }
