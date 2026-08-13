@@ -2,6 +2,13 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "EmailServiceOptions__ConnectionString": "<your-communication-service-connection-string>",
+    "EmailServiceOptions__SenderAddress": "no-reply@yourdomain.com",
+    "EmailServiceOptions__SenderDisplayName": "DummyApp Email Service",
+    "EmailServiceOptions__RecipientAddress": "<recipient-email>",
+    "EmailServiceOptions__Subject": "DummyApp test email",
+    "EmailServiceOptions__Body": "This is a test email from DummyApp Email Service via Azure Communication Email.",
+    "EmailServiceOptions__EnableOfflineDelivery": "true"
   }
 }
