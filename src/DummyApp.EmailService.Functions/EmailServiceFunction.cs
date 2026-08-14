@@ -1,5 +1,7 @@
+using System.Linq;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DummyApp.EmailService.Functions.Models;
 using DummyApp.EmailService.Functions.Services;
 using Microsoft.Azure.Functions.Worker;
@@ -10,7 +12,11 @@ namespace DummyApp.EmailService.Functions;
 
 public sealed class EmailServiceFunction
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
     private readonly IEmailService _emailService;
     private readonly ILogger<EmailServiceFunction> _logger;
 
@@ -53,14 +59,20 @@ public sealed class EmailServiceFunction
             return CreateBadRequest(req, "Request body is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Email))
-            return CreateBadRequest(req, "Email is required.");
-
         if (string.IsNullOrWhiteSpace(request.Subject))
             return CreateBadRequest(req, "Subject is required.");
 
-        if (string.IsNullOrWhiteSpace(request.Body))
-            return CreateBadRequest(req, "Body is required.");
+        if (request.Recipients is null || request.Recipients.Count == 0)
+            return CreateBadRequest(req, "At least one recipient is required.");
+
+        if (request.Recipients.Any(string.IsNullOrWhiteSpace))
+            return CreateBadRequest(req, "Recipients must contain valid email addresses.");
+
+        if (request.Template == EmailTemplate.Unknown)
+            return CreateBadRequest(req, "A valid template is required.");
+
+        if (request.Parameters is null)
+            return CreateBadRequest(req, "Template parameters are required.");
 
         await _emailService.SendEmailAsync(request, cancellationToken);
 
@@ -69,68 +81,6 @@ public sealed class EmailServiceFunction
         return response;
     }
 
-    [Function("SendInvite")]
-    public async Task<HttpResponseData> SendInvite(
-#if DEBUG
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "email/invite")]
-    #else
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "email/invite")]
-    #endif
-        HttpRequestData req,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("SendInvite triggered. Method: {Method}, Url: {Url}", req.Method, req.Url);
-        _logger.LogInformation("************************************************");
-
-        var body = await new StreamReader(req.Body).ReadToEndAsync(cancellationToken);
-        _logger.LogInformation("Request Body: {Body}", body);
-        _logger.LogInformation("############################");
-
-        InviteEmailRequest? request;
-        try
-        {
-            request = JsonSerializer.Deserialize<InviteEmailRequest>(body, JsonOptions);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Invalid JSON in invite email request.");
-            return CreateBadRequest(req, "Invalid JSON in request body.");
-        }
-
-        if (request is null)
-        {
-            _logger.LogWarning("InviteEmail request body deserialized to null.");
-            return CreateBadRequest(req, "Request body is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Email))
-            return CreateBadRequest(req, "Email is required.");
-
-        if (string.IsNullOrWhiteSpace(request.Token))
-            return CreateBadRequest(req, "Token is required.");
-
-        await _emailService.SendInviteAsync(request, cancellationToken);
-
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteAsJsonAsync(new { message = "Invite email request accepted." }, cancellationToken);
-        return response;
-    }
-
-    [Function("SendTestEmail")]
-    public async Task<HttpResponseData> SendTestEmail(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "email/test")]
-        HttpRequestData req,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("SendTestEmail triggered. Method: {Method}, Url: {Url}", req.Method, req.Url);
-        _logger.LogInformation("************************************************");
-
-        await _emailService.SendTestEmailAsync(cancellationToken);
-
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteAsJsonAsync(new { message = "Test email request accepted." }, cancellationToken);
-        return response;
-    }
 
     private static HttpResponseData CreateBadRequest(HttpRequestData req, string message)
     {
