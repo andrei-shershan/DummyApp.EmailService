@@ -1,5 +1,6 @@
 using Azure;
 using Azure.Communication.Email;
+using Azure.Core;
 using DummyApp.EmailService.Functions.Models;
 using DummyApp.EmailService.Functions.Options;
 using Microsoft.Extensions.Logging;
@@ -67,6 +68,20 @@ public sealed class EmailService : IEmailService
         };
 
         var emailMessage = new EmailMessage(_options.SenderAddress, recipientsContainer, content);
+
+        if (request.Attachments is not null && request.Attachments.Any())
+        {
+            foreach (var attachment in request.Attachments)
+            {
+                if (string.IsNullOrWhiteSpace(attachment.Name) || string.IsNullOrWhiteSpace(attachment.ContentType) || string.IsNullOrWhiteSpace(attachment.Base64Content))
+                {
+                    throw new InvalidOperationException("Attachment name, content type, and base64 content must be provided.");
+                }
+
+                var binaryData = new BinaryData(Convert.FromBase64String(attachment.Base64Content));
+                emailMessage.Attachments.Add(new EmailAttachment(attachment.Name, attachment.ContentType, binaryData));
+            }
+        }
 
         await emailClient.SendAsync(WaitUntil.Completed, emailMessage, cancellationToken);
     }

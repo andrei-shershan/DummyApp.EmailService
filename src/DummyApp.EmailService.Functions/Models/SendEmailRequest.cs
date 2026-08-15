@@ -8,4 +8,5 @@ public sealed class SendEmailRequest
     public IReadOnlyCollection<string> Recipients { get; init; } = Array.Empty<string>();
     public EmailTemplate Template { get; init; } = EmailTemplate.Unknown;
     public JsonElement? Parameters { get; init; }
+    public IReadOnlyCollection<SendEmailAttachment> Attachments { get; init; } = Array.Empty<SendEmailAttachment>();
 }
