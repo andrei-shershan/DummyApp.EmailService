@@ -92,6 +92,7 @@ public sealed class EmailService : IEmailService
         {
             EmailTemplate.Invite => GetBodyForInvite(parameters),
             EmailTemplate.CompletedOrder => GetBodyForCompletedOrder(parameters),
+            EmailTemplate.VerificationCode => GetBodyForVerificationCode(parameters),
             _ => throw new InvalidOperationException($"Email template '{template}' is not supported.")
         };
     }
@@ -102,6 +103,7 @@ public sealed class EmailService : IEmailService
         {
             EmailTemplate.Invite => GetHtmlBodyForInvite(parameters),
             EmailTemplate.CompletedOrder => GetHtmlBodyForCompletedOrderHtml(parameters),
+            EmailTemplate.VerificationCode => GetHtmlBodyForVerificationCode(parameters),
             _ => throw new InvalidOperationException($"Email template '{template}' is not supported.")
         };
     }
@@ -129,6 +131,44 @@ public sealed class EmailService : IEmailService
     {
         var inviteText = GetBodyForInvite(parameters);
         return $"<html><body><p>{WebUtility.HtmlEncode(inviteText)}</p></body></html>";
+    }
+
+    private static string GetBodyForVerificationCode(JsonElement parameters)
+    {
+        if (!parameters.TryGetProperty("code", out var codeElement) || codeElement.ValueKind != JsonValueKind.String)
+            throw new InvalidOperationException("Template parameter 'code' is required for VerificationCode.");
+
+        if (!parameters.TryGetProperty("email", out var emailElement) || emailElement.ValueKind != JsonValueKind.String)
+            throw new InvalidOperationException("Template parameter 'email' is required for VerificationCode.");
+
+        if (!parameters.TryGetProperty("expiresAt", out var expiresAtElement) || expiresAtElement.ValueKind != JsonValueKind.String)
+            throw new InvalidOperationException("Template parameter 'expiresAt' is required for VerificationCode.");
+
+        var code = codeElement.GetString();
+        var email = emailElement.GetString();
+        var expiresAt = expiresAtElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(expiresAt))
+            throw new InvalidOperationException("Template parameter 'code', 'email', and 'expiresAt' are required for VerificationCode.");
+
+        return $"Hello,\n\nYour DummyApp verification code is: {code}\n\nThis code is valid until {expiresAt}.\n\nIf you did not request this code, please ignore this message.\n";
+    }
+
+    private static string GetHtmlBodyForVerificationCode(JsonElement parameters)
+    {
+        var code = parameters.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.String
+            ? codeElement.GetString()
+            : string.Empty;
+        var expiresAt = parameters.TryGetProperty("expiresAt", out var expiresAtElement) && expiresAtElement.ValueKind == JsonValueKind.String
+            ? expiresAtElement.GetString()
+            : string.Empty;
+
+        return $"<html><body><div style=\"font-family:Segoe UI,Arial,sans-serif;color:#111;line-height:1.5;margin:0;padding:24px;max-width:680px;\">" +
+               $"<h1 style=\"font-size:24px;margin-bottom:1rem;\">Verification Code</h1>" +
+               $"<p>Your DummyApp verification code is <strong>{WebUtility.HtmlEncode(code)}</strong>.</p>" +
+               $"<p>This code is valid until <strong>{WebUtility.HtmlEncode(expiresAt)}</strong>.</p>" +
+               $"<p>If you did not request this code, please ignore this message.</p>" +
+               $"</div></body></html>";
     }
 
     private static string GetBodyForCompletedOrder(JsonElement parameters)
